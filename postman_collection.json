@@ -1,0 +1,948 @@
+{
+  "info": {
+    "_postman_id": "8f3b207a-9a3d-4c7b-b384-912a7d4a6501",
+    "name": "FinTech Core Wallet & Gaming Integration API Suite",
+    "description": "Comprehensive production-grade API testing collection for Multi-Tenant Identity, PSP Callbacks, GSP Bet/Win Callbacks, Idempotency, and Tenant Isolation.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api/v1", "type": "string" },
+    { "key": "tenantAlphaId", "value": "tenant_alpha", "type": "string" },
+    { "key": "tenantBetaId", "value": "tenant_beta", "type": "string" },
+    { "key": "pspSecretAlpha", "value": "sec_live_alpha_psp_8f93bc817", "type": "string" },
+    { "key": "pspSecretBeta", "value": "sec_live_beta_psp_1a2b3c4d5", "type": "string" },
+    { "key": "gspSecretAlpha", "value": "sec_live_alpha_gsp_4d1109aa7", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "userIdAlpha", "value": "", "type": "string" },
+    { "key": "userIdBeta", "value": "", "type": "string" },
+    { "key": "lastPspRefId", "value": "", "type": "string" },
+    { "key": "lastRoundId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "01. Identity & Access Management",
+      "item": [
+        {
+          "name": "1.1 Register User (Tenant Alpha) - Success",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const rand = Math.floor(Math.random() * 1000000);",
+                  "const email = `player_alpha_${rand}@fintech.test`;",
+                  "pm.collectionVariables.set('regEmailAlpha', email);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response time is under 300ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(300);",
+                  "});",
+                  "const schema = {",
+                  "    type: 'object',",
+                  "    required: ['user_id', 'email', 'tenant_id', 'wallet_id', 'created_at'],",
+                  "    properties: {",
+                  "        user_id: { type: 'string' },",
+                  "        email: { type: 'string' },",
+                  "        tenant_id: { type: 'string', enum: ['tenant_alpha'] },",
+                  "        wallet_id: { type: 'string' },",
+                  "        created_at: { type: 'string' }",
+                  "    }",
+                  "};",
+                  "pm.test('JSON Schema is valid and no password exposed', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(tv4.validate(jsonData, schema)).to.be.true;",
+                  "    pm.expect(jsonData.password).to.be.undefined;",
+                  "    pm.expect(jsonData.password_hash).to.be.undefined;",
+                  "    pm.collectionVariables.set('userIdAlpha', jsonData.user_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantAlphaId}}\",\n  \"email\": \"{{regEmailAlpha}}\",\n  \"password\": \"SecurePass123!\",\n  \"currency\": \"EUR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "1.2 Register User - Duplicate Email Conflict (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Returns structured error ERR_USER_EXISTS', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.eql('ERR_USER_EXISTS');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantAlphaId}}\",\n  \"email\": \"{{regEmailAlpha}}\",\n  \"password\": \"AnotherPass456!\",\n  \"currency\": \"EUR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "1.3 Login (Tenant Alpha) - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Valid JWT tokens returned with expires_in', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.be.a('string');",
+                  "    pm.expect(jsonData.refresh_token).to.be.a('string');",
+                  "    pm.expect(jsonData.expires_in).to.eql(3600);",
+                  "    pm.collectionVariables.set('accessToken', jsonData.access_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantAlphaId}}\",\n  \"email\": \"{{regEmailAlpha}}\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "1.4 Login - Invalid Password (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Returns ERR_INVALID_CREDENTIALS', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.eql('ERR_INVALID_CREDENTIALS');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantAlphaId}}\",\n  \"email\": \"{{regEmailAlpha}}\",\n  \"password\": \"CompletelyWrongPass!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Core Wallet",
+      "item": [
+        {
+          "name": "2.1 Get Current Wallet Balance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Balance response structure and types', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.user_id).to.eql(pm.collectionVariables.get('userIdAlpha'));",
+                  "    pm.expect(jsonData.tenant_id).to.eql('tenant_alpha');",
+                  "    pm.expect(jsonData.currency).to.eql('EUR');",
+                  "    pm.expect(jsonData.available_balance).to.be.a('number');",
+                  "    pm.expect(jsonData.total_balance).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/wallet/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["wallet", "balance"]
+            }
+          }
+        },
+        {
+          "name": "2.2 Get Wallet Balance - Unauthorized / Missing Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/wallet/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["wallet", "balance"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. PSP Deposit Callbacks (Money In)",
+      "item": [
+        {
+          "name": "3.1 PSP Deposit Callback - Success Credit",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const pspRefId = 'psp_tx_' + Date.now() + '_' + Math.floor(Math.random() * 1000);",
+                  "const eventId = 'evt_' + Date.now();",
+                  "const timestamp = Math.floor(Date.now() / 1000);",
+                  "const amount = 5000; // 50.00 EUR in cents",
+                  "pm.collectionVariables.set('lastPspRefId', pspRefId);",
+                  "pm.collectionVariables.set('lastDepositEventId', eventId);",
+                  "pm.collectionVariables.set('lastDepositTimestamp', timestamp);",
+                  "pm.collectionVariables.set('lastDepositAmount', amount);",
+                  "",
+                  "const payload = JSON.stringify({",
+                  "    event_type: 'DEPOSIT_SUCCESS',",
+                  "    event_id: eventId,",
+                  "    tenant_id: pm.collectionVariables.get('tenantAlphaId'),",
+                  "    user_id: pm.collectionVariables.get('userIdAlpha'),",
+                  "    psp_reference_id: pspRefId,",
+                  "    amount: amount,",
+                  "    currency: 'EUR',",
+                  "    timestamp: timestamp",
+                  "});",
+                  "pm.collectionVariables.set('depositPayload', payload);",
+                  "",
+                  "// Calculate HMAC-SHA256 signature",
+                  "const secret = pm.collectionVariables.get('pspSecretAlpha');",
+                  "const signature = CryptoJS.HmacSHA256(payload, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.collectionVariables.set('pspSignature', signature);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Deposit processed and balance credited', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('PROCESSED');",
+                  "    pm.expect(jsonData.psp_reference_id).to.eql(pm.collectionVariables.get('lastPspRefId'));",
+                  "    pm.expect(jsonData.credited_amount).to.eql(5000);",
+                  "    pm.expect(jsonData.new_balance).to.be.at.least(5000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" },
+              { "key": "X-PSP-Signature", "value": "{{pspSignature}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{depositPayload}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/callbacks/psp/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["callbacks", "psp", "deposit"]
+            }
+          }
+        },
+        {
+          "name": "3.2 PSP Deposit Callback - Duplicate Idempotency Replay",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK on duplicate', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Idempotency recognized and no double-crediting occurred', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('PROCESSED');",
+                  "    pm.expect(jsonData.is_duplicate).to.be.true;",
+                  "    pm.expect(jsonData.psp_reference_id).to.eql(pm.collectionVariables.get('lastPspRefId'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" },
+              { "key": "X-PSP-Signature", "value": "{{pspSignature}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{depositPayload}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/callbacks/psp/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["callbacks", "psp", "deposit"]
+            }
+          }
+        },
+        {
+          "name": "3.3 PSP Deposit Callback - Invalid HMAC Signature (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Returns ERR_INVALID_SIGNATURE', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.eql('ERR_INVALID_SIGNATURE');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" },
+              { "key": "X-PSP-Signature", "value": "invalid_signature_hash_0000000000" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{depositPayload}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/callbacks/psp/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["callbacks", "psp", "deposit"]
+            }
+          }
+        },
+        {
+          "name": "3.4 PSP Deposit Callback - Expired Timestamp Replay Attack (401/400)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const pspRefId = 'psp_replay_' + Date.now();",
+                  "const expiredTimestamp = Math.floor(Date.now() / 1000) - 600; // 10 minutes ago",
+                  "const payload = JSON.stringify({",
+                  "    event_type: 'DEPOSIT_SUCCESS',",
+                  "    event_id: 'evt_exp_' + Date.now(),",
+                  "    tenant_id: pm.collectionVariables.get('tenantAlphaId'),",
+                  "    user_id: pm.collectionVariables.get('userIdAlpha'),",
+                  "    psp_reference_id: pspRefId,",
+                  "    amount: 5000,",
+                  "    currency: 'EUR',",
+                  "    timestamp: expiredTimestamp",
+                  "});",
+                  "pm.collectionVariables.set('expiredPayload', payload);",
+                  "const secret = pm.collectionVariables.get('pspSecretAlpha');",
+                  "const sig = CryptoJS.HmacSHA256(payload, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.collectionVariables.set('expiredSignature', sig);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 or 401 on expired timestamp', function () {",
+                  "    pm.expect([400, 401]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('Rejects with ERR_TIMESTAMP_EXPIRED', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.eql('ERR_TIMESTAMP_EXPIRED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" },
+              { "key": "X-PSP-Signature", "value": "{{expiredSignature}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{expiredPayload}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/callbacks/psp/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["callbacks", "psp", "deposit"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. GSP Bet & Win Callbacks (Gaming)",
+      "item": [
+        {
+          "name": "4.1 GSP Bet Callback - Debit Balance",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const roundId = 'rnd_' + Date.now() + '_' + Math.floor(Math.random() * 1000);",
+                  "const timestamp = Math.floor(Date.now() / 1000);",
+                  "pm.collectionVariables.set('lastRoundId', roundId);",
+                  "",
+                  "const payload = JSON.stringify({",
+                  "    event_type: 'BET',",
+                  "    round_id: roundId,",
+                  "    tenant_id: pm.collectionVariables.get('tenantAlphaId'),",
+                  "    user_id: pm.collectionVariables.get('userIdAlpha'),",
+                  "    game_id: 'slot_book_of_wealth',",
+                  "    bet_amount: 2000, // 20.00 EUR",
+                  "    currency: 'EUR',",
+                  "    timestamp: timestamp",
+                  "});",
+                  "pm.collectionVariables.set('betPayload', payload);",
+                  "const secret = pm.collectionVariables.get('gspSecretAlpha');",
+                  "const sig = CryptoJS.HmacSHA256(payload, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.collectionVariables.set('gspBetSignature', sig);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Bet debited successfully', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('ACCEPTED');",
+                  "    pm.expect(jsonData.round_id).to.eql(pm.collectionVariables.get('lastRoundId'));",
+                  "    pm.expect(jsonData.debited_amount).to.eql(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" },
+              { "key": "X-GSP-Signature", "value": "{{gspBetSignature}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{betPayload}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/callbacks/gsp/bet",
+              "host": ["{{baseUrl}}"],
+              "path": ["callbacks", "gsp", "bet"]
+            }
+          }
+        },
+        {
+          "name": "4.2 GSP Bet Callback - Duplicate Replay Idempotency",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK on duplicate bet', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('No double debit on duplicate bet round', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('ACCEPTED');",
+                  "    pm.expect(jsonData.is_duplicate).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" },
+              { "key": "X-GSP-Signature", "value": "{{gspBetSignature}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{betPayload}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/callbacks/gsp/bet",
+              "host": ["{{baseUrl}}"],
+              "path": ["callbacks", "gsp", "bet"]
+            }
+          }
+        },
+        {
+          "name": "4.3 GSP Bet Callback - Insufficient Funds (402/422)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const roundId = 'rnd_overdraft_' + Date.now();",
+                  "const payload = JSON.stringify({",
+                  "    event_type: 'BET',",
+                  "    round_id: roundId,",
+                  "    tenant_id: pm.collectionVariables.get('tenantAlphaId'),",
+                  "    user_id: pm.collectionVariables.get('userIdAlpha'),",
+                  "    game_id: 'slot_book_of_wealth',",
+                  "    bet_amount: 99999999, // 999,999.99 EUR",
+                  "    currency: 'EUR',",
+                  "    timestamp: Math.floor(Date.now() / 1000)",
+                  "});",
+                  "pm.collectionVariables.set('overdraftPayload', payload);",
+                  "const secret = pm.collectionVariables.get('gspSecretAlpha');",
+                  "const sig = CryptoJS.HmacSHA256(payload, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.collectionVariables.set('overdraftSignature', sig);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 402 or 422 for insufficient balance', function () {",
+                  "    pm.expect([402, 422]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('Error code is ERR_INSUFFICIENT_FUNDS', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.eql('ERR_INSUFFICIENT_FUNDS');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" },
+              { "key": "X-GSP-Signature", "value": "{{overdraftSignature}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{overdraftPayload}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/callbacks/gsp/bet",
+              "host": ["{{baseUrl}}"],
+              "path": ["callbacks", "gsp", "bet"]
+            }
+          }
+        },
+        {
+          "name": "4.4 GSP Win Callback - Settle Round and Credit Winnings",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const roundId = pm.collectionVariables.get('lastRoundId');",
+                  "const timestamp = Math.floor(Date.now() / 1000);",
+                  "const payload = JSON.stringify({",
+                  "    event_type: 'WIN',",
+                  "    round_id: roundId,",
+                  "    tenant_id: pm.collectionVariables.get('tenantAlphaId'),",
+                  "    user_id: pm.collectionVariables.get('userIdAlpha'),",
+                  "    game_id: 'slot_book_of_wealth',",
+                  "    win_amount: 8000, // 80.00 EUR",
+                  "    currency: 'EUR',",
+                  "    timestamp: timestamp",
+                  "});",
+                  "pm.collectionVariables.set('winPayload', payload);",
+                  "const secret = pm.collectionVariables.get('gspSecretAlpha');",
+                  "const sig = CryptoJS.HmacSHA256(payload, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.collectionVariables.set('gspWinSignature', sig);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Round settled and win credited', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('SETTLED');",
+                  "    pm.expect(jsonData.round_id).to.eql(pm.collectionVariables.get('lastRoundId'));",
+                  "    pm.expect(jsonData.win_amount).to.eql(8000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" },
+              { "key": "X-GSP-Signature", "value": "{{gspWinSignature}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{winPayload}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/callbacks/gsp/win",
+              "host": ["{{baseUrl}}"],
+              "path": ["callbacks", "gsp", "win"]
+            }
+          }
+        },
+        {
+          "name": "4.5 GSP Win Callback - Duplicate Win Replay Idempotency",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK on duplicate win', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('No double payout credited on duplicate win callback', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('SETTLED');",
+                  "    pm.expect(jsonData.is_duplicate).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" },
+              { "key": "X-GSP-Signature", "value": "{{gspWinSignature}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{winPayload}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/callbacks/gsp/win",
+              "host": ["{{baseUrl}}"],
+              "path": ["callbacks", "gsp", "win"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Multi-Tenant Isolation & Security",
+      "item": [
+        {
+          "name": "5.1 Register User in Tenant Beta",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const rand = Math.floor(Math.random() * 1000000);",
+                  "pm.collectionVariables.set('regEmailBeta', `user_beta_${rand}@fintech.test`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 Created for Tenant Beta', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "const jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('userIdBeta', jsonData.user_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantBetaId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantBetaId}}\",\n  \"email\": \"{{regEmailBeta}}\",\n  \"password\": \"SecurePassBeta123!\",\n  \"currency\": \"USD\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "5.2 Cross-Tenant IDOR - Access Tenant Beta Wallet with Tenant Alpha Token (403/404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden or 404 Not Found', function () {",
+                  "    pm.expect([403, 404]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('Tenant leakage blocked: zero financial data exposed', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.available_balance).to.be.undefined;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "X-Tenant-ID", "value": "{{tenantBetaId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/wallet/balance?user_id={{userIdBeta}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["wallet", "balance"],
+              "query": [
+                { "key": "user_id", "value": "{{userIdBeta}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.3 Cross-Tenant Key Mismatch - Tenant Alpha Secret on Tenant Beta Webhook (401)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const payload = JSON.stringify({",
+                  "    event_type: 'DEPOSIT_SUCCESS',",
+                  "    event_id: 'evt_cross_' + Date.now(),",
+                  "    tenant_id: pm.collectionVariables.get('tenantBetaId'),",
+                  "    user_id: pm.collectionVariables.get('userIdBeta'),",
+                  "    psp_reference_id: 'psp_cross_' + Date.now(),",
+                  "    amount: 10000,",
+                  "    currency: 'USD',",
+                  "    timestamp: Math.floor(Date.now() / 1000)",
+                  "});",
+                  "pm.collectionVariables.set('crossPayload', payload);",
+                  "// Signed with WRONG key (Alpha key instead of Beta key)",
+                  "const wrongSecret = pm.collectionVariables.get('pspSecretAlpha');",
+                  "const sig = CryptoJS.HmacSHA256(payload, wrongSecret).toString(CryptoJS.enc.Hex);",
+                  "pm.collectionVariables.set('crossSignature', sig);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized for cross-tenant secret', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Returns ERR_INVALID_SIGNATURE', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.eql('ERR_INVALID_SIGNATURE');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{tenantBetaId}}" },
+              { "key": "X-PSP-Signature", "value": "{{crossSignature}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{crossPayload}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/callbacks/psp/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["callbacks", "psp", "deposit"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Transactions & Ledger Audit",
+      "item": [
+        {
+          "name": "6.1 Get Paginated Transaction History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Transaction list contains items with ledger reference', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "    pm.expect(jsonData.total_count).to.be.a('number');",
+                  "    if (jsonData.items.length > 0) {",
+                  "        const first = jsonData.items[0];",
+                  "        pm.expect(first).to.have.property('transaction_id');",
+                  "        pm.expect(first).to.have.property('type');",
+                  "        pm.expect(first).to.have.property('amount');",
+                  "        pm.expect(first).to.have.property('currency');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "X-Tenant-ID", "value": "{{tenantAlphaId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transactions?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

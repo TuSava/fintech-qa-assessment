@@ -1,0 +1,16 @@
+# OS and environment
+.DS_Store
+*.swp
+*.log
+
+# Dependencies and build outputs
+node_modules/
+dist/
+playwright-report/
+test-results/
+.env
+
+# Local assignment materials to keep only on local machine
+*.pdf
+JS/
+ТЗ*

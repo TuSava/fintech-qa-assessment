@@ -1,0 +1,37 @@
+{
+  "name": "fintech-qa-automation-suite",
+  "version": "1.0.0",
+  "description": "Enterprise-grade Playwright + TypeScript API Automation Framework for Multi-Tenant Core Wallet & Payment Integrations",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:registration": "playwright test tests/01-registration.spec.ts",
+    "test:login": "playwright test tests/02-login.spec.ts",
+    "test:deposit": "playwright test tests/03-deposit-callback.spec.ts",
+    "test:idempotency": "playwright test tests/04-duplicate-callback-idempotency.spec.ts",
+    "test:wallet": "playwright test tests/05-wallet-balance-validation.spec.ts",
+    "test:gsp": "playwright test tests/06-bet-win-gsp.spec.ts",
+    "test:tenant": "playwright test tests/07-tenant-isolation.spec.ts",
+    "start:mock": "ts-node mock-server/server.ts",
+    "report": "playwright show-report"
+  },
+  "keywords": [
+    "qa",
+    "automation",
+    "playwright",
+    "typescript",
+    "fintech",
+    "idempotency",
+    "integration-testing"
+  ],
+  "author": "Senior QA Engineer",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.42.1",
+    "@types/node": "^20.11.24",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
