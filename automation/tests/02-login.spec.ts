@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures/test-fixtures';
+import { test, expect } from '../fixtures/base-test';
 import { Config } from '../configuration/environment';
 
 test.describe('Identity: User Authentication Suite', () => {
