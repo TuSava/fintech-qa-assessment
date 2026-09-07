@@ -15,7 +15,10 @@
     "test:gsp": "playwright test tests/06-bet-win-gsp.spec.ts",
     "test:tenant": "playwright test tests/07-tenant-isolation.spec.ts",
     "start:mock": "ts-node mock-server/server.ts",
-    "report": "playwright show-report"
+    "report": "playwright show-report",
+    "allure:generate": "allure generate ./allure-results --clean -o ./allure-report",
+    "allure:open": "allure open ./allure-report",
+    "test:allure": "playwright test && npm run allure:generate && npm run allure:open"
   },
   "keywords": [
     "qa",
@@ -24,13 +27,16 @@
     "typescript",
     "fintech",
     "idempotency",
-    "integration-testing"
+    "integration-testing",
+    "allure"
   ],
   "author": "Senior QA Engineer",
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.42.1",
     "@types/node": "^20.11.24",
+    "allure-commandline": "^2.27.0",
+    "allure-playwright": "^2.15.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   }
