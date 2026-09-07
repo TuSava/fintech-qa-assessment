@@ -1,7 +1,7 @@
 Test Plan: Core Financial & Gaming Integration Flow (Mini-MVP)
 
 Document Version: 1.0.0  
-Author: Senior QA Engineer  
+Author: Savran Roman
 System: Multi-Tenant Core Wallet & Gaming Integration Platform  
 Target Environment: Staging / Pre-Production Sandbox  
 
@@ -124,7 +124,6 @@ Testing follows a layered, shift-left engineering approach focused on API-first 
 7.1 Risk Matrix
 
 | Risk ID | Risk Description | Probability | Impact | Severity |
-| :--- | :--- | :---: | :---: | :---: |
 | RSK-01 | Duplicate deposit callback credited twice due to race condition under high load. | High | Critical | HIGH |
 | RSK-02 | Cross-tenant data leakage exposing customer balances or transactions between operators. | Low | Critical | HIGH |
 | RSK-03 | Webhook replay attacks executing financial credits using previously valid signed payloads. | Med | Critical | HIGH |
