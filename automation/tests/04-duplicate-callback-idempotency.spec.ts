@@ -26,6 +26,7 @@ test.describe('Payment Integration: Idempotency & Duplicate Callback Suite', () 
     token = (await loginRes.json()).access_token;
   });
 
+  // Idempotency screen: verify sequential duplicate callback
   test('IDEMP-01: Sequential duplicate callback must be recognized and not credit balance twice', async ({
     pspHelper,
     walletHelper,
@@ -64,6 +65,7 @@ test.describe('Payment Integration: Idempotency & Duplicate Callback Suite', () 
     expect(walletData.available_balance).toBe(4000);
   });
 
+  // Idempotency screen: verify parallel duplicate callbacks race condition
   test('IDEMP-02: Concurrent parallel duplicate callbacks must resolve idempotently without double-spend', async ({
     pspHelper,
     walletHelper,

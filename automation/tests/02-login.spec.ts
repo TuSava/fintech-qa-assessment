@@ -19,6 +19,7 @@ test.describe('Identity: User Authentication Suite', () => {
     });
   });
 
+  // Login screen: verify successful login and token generation
   test('AUTH-01: Should authenticate valid credentials and return access token', async ({ authHelper }) => {
     const response = await authHelper.login({
       tenant_id: tenantId,
@@ -34,6 +35,7 @@ test.describe('Identity: User Authentication Suite', () => {
     expect(body.token_type).toBe('Bearer');
   });
 
+  // Login screen: verify rejection on wrong password
   test('AUTH-02: Should reject login with invalid password with 401 Unauthorized', async ({ authHelper }) => {
     const response = await authHelper.login({
       tenant_id: tenantId,

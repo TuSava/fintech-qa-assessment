@@ -3,6 +3,7 @@ import { APIRequestContext, APIResponse } from '@playwright/test';
 export class AuthHelper {
   constructor(private request: APIRequestContext) {}
 
+  // Registration screen: register new player account
   public async register(payload: {
     tenant_id: string;
     email: string;
@@ -17,6 +18,7 @@ export class AuthHelper {
     });
   }
 
+  // Login screen: authenticate user and return access token
   public async login(payload: {
     tenant_id: string;
     email: string;

@@ -27,6 +27,7 @@ test.describe('Payment Integration: PSP Deposit Callback Suite', () => {
     token = loginData.access_token;
   });
 
+  // Deposit screen: verify valid signed callback credits balance
   test('DEP-01: Should process valid signed deposit callback and credit balance', async ({ pspHelper, walletHelper }) => {
     const depositAmount = 5000; // 50.00 EUR
     const pspRef = CryptoUtil.generateId('psp_tx');
@@ -58,6 +59,7 @@ test.describe('Payment Integration: PSP Deposit Callback Suite', () => {
     expect(walletData.available_balance).toBe(depositAmount);
   });
 
+  // Deposit screen: verify invalid signature rejection
   test('DEP-02: Should reject deposit callback with invalid HMAC signature with 401', async ({ pspHelper }) => {
     const response = await pspHelper.sendDepositCallback(
       {
@@ -79,6 +81,7 @@ test.describe('Payment Integration: PSP Deposit Callback Suite', () => {
     expect(body.error).toBe('ERR_INVALID_SIGNATURE');
   });
 
+  // Deposit screen: verify expired timestamp replay rejection
   test('DEP-03: Should reject expired callback timestamp (>300s drift) with 400', async ({ pspHelper }) => {
     const expiredTimestamp = CryptoUtil.currentTimestamp() - 600; // 10 minutes ago
     const response = await pspHelper.sendDepositCallback(

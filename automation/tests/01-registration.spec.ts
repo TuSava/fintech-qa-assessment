@@ -4,6 +4,7 @@ import { Config } from '../configuration/environment';
 test.describe('Identity: User Registration Suite', () => {
   const tenantId = Config.tenants.alpha.id;
 
+  // Registration screen: verify new user registration and initial wallet
   test('REG-01: Should successfully register a new user and initialize an empty wallet', async ({ authHelper }) => {
     const uniqueEmail = `test_player_${Date.now()}@fintech.test`;
     const response = await authHelper.register({
@@ -24,6 +25,7 @@ test.describe('Identity: User Registration Suite', () => {
     expect(body).not.toHaveProperty('passwordHash');
   });
 
+  // Registration screen: verify duplicate email rejection
   test('REG-02: Should reject registration with duplicate email in same tenant with 409 Conflict', async ({ authHelper }) => {
     const existingEmail = `dup_player_${Date.now()}@fintech.test`;
 
@@ -49,6 +51,7 @@ test.describe('Identity: User Registration Suite', () => {
     expect(body.error).toBe('ERR_USER_EXISTS');
   });
 
+  // Registration screen: verify missing password input validation
   test('REG-03: Should reject registration with missing password with 400 Bad Request', async ({ authHelper }) => {
     const response = await authHelper.register({
       tenant_id: tenantId,

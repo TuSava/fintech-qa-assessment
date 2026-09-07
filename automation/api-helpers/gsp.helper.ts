@@ -26,6 +26,7 @@ export interface GspWinPayload {
 export class GspHelper {
   constructor(private request: APIRequestContext) {}
 
+  // Game screen: send bet callback to debit balance
   public async sendBetCallback(payload: GspBetPayload, secret: string, overrideSig?: string): Promise<APIResponse> {
     const raw = JSON.stringify(payload);
     const signature = overrideSig !== undefined ? overrideSig : CryptoUtil.signHmacSha256(raw, secret);
@@ -39,6 +40,7 @@ export class GspHelper {
     });
   }
 
+  // Game screen: send win callback to settle round and credit balance
   public async sendWinCallback(payload: GspWinPayload, secret: string, overrideSig?: string): Promise<APIResponse> {
     const raw = JSON.stringify(payload);
     const signature = overrideSig !== undefined ? overrideSig : CryptoUtil.signHmacSha256(raw, secret);

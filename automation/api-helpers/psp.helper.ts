@@ -15,6 +15,7 @@ export interface PspDepositPayload {
 export class PspHelper {
   constructor(private request: APIRequestContext) {}
 
+  // Deposit screen: send deposit webhook callback with signature
   public async sendDepositCallback(
     payload: PspDepositPayload,
     secret: string,

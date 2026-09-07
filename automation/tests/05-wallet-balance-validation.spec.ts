@@ -26,6 +26,7 @@ test.describe('Core Wallet: Balance Validation Suite', () => {
     token = (await loginRes.json()).access_token;
   });
 
+  // Wallet screen: verify initial empty balance
   test('WAL-01: Brand new wallet should start with 0 balance and correct currency', async ({ walletHelper }) => {
     const response = await walletHelper.getBalance(token, tenantConfig.id);
     expect(response.status()).toBe(200);
@@ -38,6 +39,7 @@ test.describe('Core Wallet: Balance Validation Suite', () => {
     expect(body.total_balance).toBe(0);
   });
 
+  // Wallet screen: verify balance after consecutive deposits
   test('WAL-02: Balance should accurately reflect consecutive deposits', async ({ pspHelper, walletHelper }) => {
     // Deposit 1: 30.00 EUR (3000 cents)
     await pspHelper.sendDepositCallback(
@@ -76,6 +78,7 @@ test.describe('Core Wallet: Balance Validation Suite', () => {
     expect(body.available_balance).toBe(10000);
   });
 
+  // Wallet screen: verify unauthorized access rejection
   test('WAL-03: Should reject balance query without authentication token with 401', async ({ request }) => {
     const response = await request.get('/wallet/balance', {
       headers: { 'X-Tenant-ID': tenantConfig.id },

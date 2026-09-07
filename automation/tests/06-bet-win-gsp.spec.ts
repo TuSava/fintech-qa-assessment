@@ -40,6 +40,7 @@ test.describe('Gaming Integration: GSP Bet & Win Round Lifecycle Suite', () => {
     );
   });
 
+  // Game screen: verify full round bet win settlement
   test('GSP-01: Full Round Lifecycle: Bet debit -> Win payout -> Round settlement', async ({ gspHelper, walletHelper }) => {
     const roundId = CryptoUtil.generateId('rnd_spin');
     const betAmount = 2500; // 25.00 EUR
@@ -89,6 +90,7 @@ test.describe('Gaming Integration: GSP Bet & Win Round Lifecycle Suite', () => {
     expect(walletBody.available_balance).toBe(15000);
   });
 
+  // Game screen: verify insufficient funds rejection
   test('GSP-02: Should reject bet when bet exceeds available wallet balance with 402', async ({ gspHelper }) => {
     const betRes = await gspHelper.sendBetCallback(
       {
@@ -109,6 +111,7 @@ test.describe('Gaming Integration: GSP Bet & Win Round Lifecycle Suite', () => {
     expect(body.error).toBe('ERR_INSUFFICIENT_FUNDS');
   });
 
+  // Game screen: verify uninitialized round rejection
   test('GSP-03: Win callback for uninitialized round should be rejected with 409', async ({ gspHelper }) => {
     const winRes = await gspHelper.sendWinCallback(
       {
