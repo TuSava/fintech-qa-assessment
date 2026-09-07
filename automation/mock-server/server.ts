@@ -75,8 +75,11 @@ function verifyHmac(body: string, signature: string, secret: string): boolean {
 }
 
 const server = http.createServer((req, res) => {
-  const urlObj = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-  const pathname = urlObj.pathname;
+  const rawPath = urlObj.pathname;
+  // Normalize pathname: ensure /api/v1 prefix is consistently present
+  const pathname = rawPath.startsWith('/api/v1')
+    ? rawPath
+    : `/api/v1${rawPath.startsWith('/') ? rawPath : `/${rawPath}`}`;
   const method = req.method || 'GET';
 
   let body = '';
@@ -86,8 +89,8 @@ const server = http.createServer((req, res) => {
 
   req.on('end', () => {
     try {
-      // 1. Health check
-      if (pathname === '/api/v1/health' || pathname === '/health') {
+      // 1. Health & Readiness check
+      if (rawPath === '/' || pathname === '/api/v1/health' || rawPath === '/health') {
         return sendJson(res, 200, { status: 'HEALTHY' });
       }
 
